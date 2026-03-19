@@ -1,0 +1,548 @@
+
+<!doctype html>
+<html>
+<head>
+
+<meta charset="utf-8">
+<title>Smart Port Monitoring System | Environmental Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Arial, sans-serif;
+margin:0;
+background:linear-gradient(180deg,#f5f7fb,#eef2f7);
+}
+
+/* HEADER */
+
+header{
+background:linear-gradient(90deg,#0d6efd,#084298);
+color:white;
+padding:22px;
+display:flex;
+align-items:center;
+gap:20px;
+box-shadow:0 4px 12px rgba(0,0,0,0.15);
+}
+
+header h1{
+margin:0;
+font-size:24px;
+}
+
+header p{
+margin:0;
+font-size:14px;
+opacity:0.9;
+}
+
+.header-right{
+margin-left:auto;
+text-align:right;
+}
+
+.header-right a{
+color:white;
+text-decoration:underline;
+font-weight:600;
+}
+
+#clock{
+font-size:14px;
+margin-bottom:6px;
+}
+
+/* CONTAINER */
+
+.container{
+padding:25px;
+max-width:1200px;
+margin:auto;
+}
+
+/* CARDS */
+
+.card{
+background:white;
+border-radius:12px;
+padding:20px;
+box-shadow:0 8px 24px rgba(0,0,0,0.08);
+transition:0.3s;
+}
+
+.card:hover{
+transform:translateY(-4px);
+box-shadow:0 10px 28px rgba(0,0,0,0.12);
+}
+
+.grid{
+display:flex;
+gap:20px;
+flex-wrap:wrap;
+margin-top:20px;
+}
+
+.card.small{
+flex:1 1 250px;
+border-top:4px solid #0d6efd;
+}
+
+.card.large{
+flex:1 1 520px;
+}
+
+/* SENSOR VALUES */
+
+.sensor-value{
+font-size:18px;
+font-weight:bold;
+margin-top:8px;
+line-height:1.6;
+}
+
+/* SYSTEM STATUS */
+
+.status{
+font-weight:bold;
+margin-top:8px;
+}
+
+#system_health{
+padding:4px 10px;
+border-radius:20px;
+background:#e8f5e9;
+font-size:14px;
+}
+
+/* BUTTONS */
+
+button{
+padding:10px 15px;
+border-radius:8px;
+border:none;
+background:#0d6efd;
+color:white;
+font-weight:600;
+cursor:pointer;
+transition:0.25s;
+}
+
+button:hover{
+background:#084298;
+transform:scale(1.05);
+}
+
+.controls{
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+margin-top:15px;
+}
+
+/* ALERTS */
+
+.alert{
+display:inline-block;
+padding:6px 12px;
+border-radius:20px;
+color:white;
+font-weight:600;
+margin-top:8px;
+font-size:13px;
+}
+
+.danger{
+background:#d32f2f;
+}
+
+/* GRAPH AREA */
+
+canvas{
+margin-top:10px;
+}
+
+/* MONITORING LIST */
+
+ul{
+margin-top:10px;
+line-height:1.8;
+}
+
+/* FOOTER */
+
+footer{
+text-align:center;
+margin-top:40px;
+padding:25px;
+color:#666;
+font-size:14px;
+background:#f1f3f6;
+}
+
+</style>
+
+</head>
+
+<body>
+
+
+<header>
+
+<div>
+
+<h1>🚢 Smart Port Monitoring System</h1>
+<p>Environmental Monitoring Dashboard</p>
+
+</div>
+
+<div class="header-right">
+
+<div id="clock"></div>
+
+<a href="{{ url_for('static', filename='poster.pdf') }}" target="_blank">
+View Project Poster
+</a>
+
+</div>
+
+</header>
+
+
+
+<div class="container">
+
+<div class="card">
+
+<h3>Project Overview</h3>
+
+<p>
+This Smart Port Monitoring System collects and visualizes environmental parameters such as air quality,
+water turbidity, and noise levels in port environments. The system demonstrates how real-time data
+monitoring can help improve sustainable and intelligent port operations.
+</p>
+
+<div class="status">
+
+System Status :
+<span id="system_health">● Operational</span>
+
+</div>
+
+<div class="controls">
+
+<button onclick="startSimulator()">Start Simulator</button>
+
+<button onclick="refreshNow()">Refresh Data</button>
+
+<button onclick="inject('pm25_spike')">Simulate Air Pollution</button>
+
+<button onclick="inject('water_pollution')">Simulate Water Pollution</button>
+
+</div>
+
+</div>
+
+
+<div class="card" style="margin-top:20px">
+
+<h3>Monitoring Summary</h3>
+
+<p>Total Sensors Active: <b>3</b></p>
+
+<ul>
+<li>🌫 Air Quality Monitoring</li>
+<li>💧 Water Turbidity Monitoring</li>
+<li>🔊 Noise Pollution Monitoring</li>
+</ul>
+
+</div>
+
+
+
+<div class="grid">
+
+<div class="card small">
+
+<h4>🌫 Air Quality</h4>
+
+<div id="air_latest" class="sensor-value">Loading...</div>
+
+<div id="air_alert"></div>
+
+</div>
+
+
+
+<div class="card small">
+
+<h4>💧 Water Quality</h4>
+
+<div id="water_latest" class="sensor-value">Loading...</div>
+
+<div id="water_alert"></div>
+
+</div>
+
+
+
+<div class="card small">
+
+<h4>🔊 Noise Level</h4>
+
+<div id="noise_latest" class="sensor-value">Loading...</div>
+
+<div id="noise_alert"></div>
+
+</div>
+
+</div>
+
+
+
+<div class="grid">
+
+<div class="card large">
+
+<h4>PM2.5 Air Pollution Trend</h4>
+
+<canvas id="chart_pm25"></canvas>
+
+</div>
+
+
+
+<div class="card large">
+
+<h4>Water Turbidity Trend</h4>
+
+<canvas id="chart_turb"></canvas>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<footer>
+
+<p>Mini Project | Information Science Engineering</p>
+
+<p>Technologies Used: Python • Flask • JavaScript • Chart.js • HTML • CSS</p>
+
+<p>Smart Port Monitoring System – Academic Demonstration</p>
+
+</footer>
+
+
+
+<script>
+
+const API="";
+
+let pm25Chart;
+let turbChart;
+
+
+/* CLOCK */
+
+function updateClock(){
+
+const now=new Date();
+
+document.getElementById("clock").innerText=
+"System Time : "+now.toLocaleTimeString();
+
+}
+
+setInterval(updateClock,1000);
+updateClock();
+
+
+async function fetchLatest(){
+
+const r=await fetch(API+"/api/latest");
+return r.json();
+
+}
+
+async function fetchHistory(sensor){
+
+const r=await fetch(API+"/api/history/"+sensor+"?limit=100");
+return r.json();
+
+}
+
+
+function showAlertElm(el,msgs){
+
+el.innerHTML="";
+
+msgs.forEach(m=>{
+
+const d=document.createElement("div");
+
+d.className="alert danger";
+
+d.innerText=m;
+
+el.appendChild(d);
+
+});
+
+}
+
+
+async function refreshNow(){
+
+const latest=await fetchLatest();
+
+if(latest.air){
+
+document.getElementById("air_latest").innerHTML=
+
+"PM2.5 : "+latest.air.pm25+" µg/m³ <br>"+
+"CO2 : "+latest.air.co2+" ppm <br>"+
+"Temp : "+latest.air.temp+" °C";
+
+}
+
+if(latest.water){
+
+document.getElementById("water_latest").innerHTML=
+
+"pH : "+latest.water.ph+" <br>"+
+"Turbidity : "+latest.water.turbidity+" NTU <br>"+
+"Temp : "+latest.water.temp+" °C";
+
+}
+
+if(latest.noise){
+
+document.getElementById("noise_latest").innerHTML=
+
+latest.noise.db+" dB";
+
+}
+
+const air_msgs=[];
+if(latest.air){
+
+if(latest.air.pm25>100) air_msgs.push("PM2.5 HIGH");
+
+if(latest.air.co2>1200) air_msgs.push("CO2 LEVEL HIGH");
+
+}
+
+const water_msgs=[];
+if(latest.water){
+
+if(latest.water.ph<6.5||latest.water.ph>8.5)
+water_msgs.push("pH OUT OF RANGE");
+
+if(latest.water.turbidity>50)
+water_msgs.push("TURBIDITY HIGH");
+
+}
+
+const noise_msgs=[];
+if(latest.noise && latest.noise.db>80)
+noise_msgs.push("NOISE LEVEL HIGH");
+
+
+showAlertElm(document.getElementById("air_alert"),air_msgs);
+showAlertElm(document.getElementById("water_alert"),water_msgs);
+showAlertElm(document.getElementById("noise_alert"),noise_msgs);
+
+
+await updateCharts();
+
+}
+
+
+async function updateCharts(){
+
+const hist=await fetchHistory("air");
+
+const pm25=hist.map(x=>({t:new Date(x.ts),v:x.pm25??0})).slice(-40);
+
+const labels=pm25.map(x=>x.t.toLocaleTimeString());
+
+const data=pm25.map(x=>x.v);
+
+if(!pm25Chart){
+
+pm25Chart=new Chart(
+document.getElementById("chart_pm25"),
+{
+type:"line",
+data:{labels,datasets:[{label:"PM2.5",data,fill:false}]}
+});
+
+}else{
+
+pm25Chart.data.labels=labels;
+pm25Chart.data.datasets[0].data=data;
+pm25Chart.update();
+
+}
+
+const whist=await fetchHistory("water");
+
+const turb=whist.map(x=>({t:new Date(x.ts),v:x.turbidity??0})).slice(-40);
+
+const labels2=turb.map(x=>x.t.toLocaleTimeString());
+
+const data2=turb.map(x=>x.v);
+
+if(!turbChart){
+
+turbChart=new Chart(
+document.getElementById("chart_turb"),
+{
+type:"line",
+data:{labels:labels2,datasets:[{label:"Turbidity",data:data2,fill:false}]}
+});
+
+}else{
+
+turbChart.data.labels=labels2;
+turbChart.data.datasets[0].data=data2;
+turbChart.update();
+
+}
+
+}
+
+
+async function startSimulator(){
+
+await fetch(API+"/start_simulator");
+
+refreshNow();
+
+setInterval(refreshNow,4000);
+
+}
+
+
+async function inject(event){
+
+await fetch(API+"/simulate_event/"+event,{method:"POST"});
+
+refreshNow();
+
+}
+
+
+refreshNow();
+setInterval(refreshNow,8000);
+
+</script>
+
+</body>
+</html>
